@@ -58,7 +58,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-ROOT_URLCONF = 'WatchShop.urls'
+ROOT_URLCONF = 'Velorum.urls'
 
 TEMPLATES = [
     {
@@ -76,7 +76,7 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'WatchShop.wsgi.application'
+WSGI_APPLICATION = 'Velorum.wsgi.application'
 
 
 # Database

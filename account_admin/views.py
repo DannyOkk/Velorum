@@ -8,7 +8,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-from TechWave.permissions import *
+from Velorum.permissions import *
 from rest_framework.decorators import api_view, permission_classes
 
 # Create your views here.
