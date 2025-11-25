@@ -20,4 +20,8 @@ urlpatterns = [
     path('market/products/<int:pk>/update-price/', views.update_product_price, name='update-product-price'),
     path('market/products/<int:pk>/reset-stock/', views.reset_stock_vendido, name='reset-stock-vendido'),
     path('market/products/bulk-markup/', views.bulk_update_markup, name='bulk-update-markup'),
+    
+    # Endpoints de Mercado Pago
+    path('market/mp/create-preference/', views.create_mp_preference, name='mp-create-preference'),
+    path('market/mp/webhook/', views.mercadopago_webhook, name='mp-webhook'),
 ]

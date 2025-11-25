@@ -18,3 +18,4 @@ endpoints.md
 account_admin/management/__init__.py
 account_admin/management/commands/__init__.py
 .env
+db.sqlite3

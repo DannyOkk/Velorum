@@ -131,6 +131,58 @@ class OrderSerializer(serializers.ModelSerializer):
                     })
                 representation['detalles'] = simplified_details
         return representation
+    
+    def create(self, validated_data):
+        """
+        Crea una orden con sus detalles.
+        Maneja el campo write_only 'detalles_input' para crear los OrderDetail.
+        """
+        # Extraer detalles_input antes de crear la orden
+        detalles_data = validated_data.pop('detalles_input', [])
+        
+        print(f"📦 Creando orden con validated_data: {validated_data}")
+        print(f"📦 Detalles a crear: {detalles_data}")
+        
+        # Crear la orden
+        order = Order.objects.create(**validated_data)
+        print(f"✅ Orden creada: #{order.id}")
+        
+        # Crear los detalles si existen
+        for detalle_data in detalles_data:
+            watch_id = detalle_data.get('watch_id')
+            cantidad = detalle_data.get('cantidad', 1)
+            
+            print(f"🔍 Buscando producto ID: {watch_id}, cantidad: {cantidad}")
+            
+            # Buscar el producto
+            try:
+                producto = Product.objects.get(id=watch_id)
+                print(f"✅ Producto encontrado: {producto.nombre}")
+            except Product.DoesNotExist:
+                # Si el producto no existe, eliminar la orden y lanzar error
+                print(f"❌ Producto con ID {watch_id} no encontrado")
+                order.delete()
+                raise ValidationError(f'Producto con ID {watch_id} no encontrado')
+            
+            # Crear el detalle
+            detalle = OrderDetail.objects.create(
+                pedido=order,
+                producto=producto,
+                cantidad=cantidad,
+                subtotal=producto.precio * cantidad
+            )
+            print(f"✅ Detalle creado: {detalle.id}")
+            
+            # Actualizar stock vendido
+            producto.stock_vendido += cantidad
+            producto.save()
+            print(f"📊 Stock vendido actualizado: {producto.stock_vendido}")
+        
+        # Actualizar total de la orden
+        order.total_update()
+        print(f"💰 Total de la orden: {order.total}")
+        
+        return order
 
 class PaySerializer(serializers.ModelSerializer):
     pedido_detalle = serializers.SerializerMethodField(read_only=True)

@@ -123,6 +123,60 @@ class ProductViewSet(viewsets.ModelViewSet):
         }
         
         return Response(datos_carrito, status=status.HTTP_200_OK)
+    
+    @action(detail=False, methods=['post'], permission_classes=[IsAdminOrOperator])
+    def reset_all_prices(self, request):
+        """Resetea todos los precios de productos a precio_proveedor * 2"""
+        try:
+            productos = Product.objects.all()
+            actualizados = 0
+            
+            for producto in productos:
+                if producto.precio_proveedor:
+                    nuevo_precio = producto.precio_proveedor * 2
+                    producto.precio = nuevo_precio
+                    producto.precio_manual = False
+                    producto.save()
+                    actualizados += 1
+            
+            return Response({
+                'mensaje': f'Precios reseteados exitosamente',
+                'actualizados': actualizados,
+                'total': productos.count()
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            return Response({
+                'error': f'Error al resetear precios: {str(e)}'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+    @action(detail=True, methods=['post'], permission_classes=[IsAdminOrOperator])
+    def reset_price(self, request, pk=None):
+        """Resetea el precio de un producto específico a precio_proveedor * 2"""
+        try:
+            producto = self.get_object()
+            
+            if not producto.precio_proveedor:
+                return Response({
+                    'error': 'Este producto no tiene precio de proveedor definido'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            nuevo_precio = producto.precio_proveedor * 2
+            producto.precio = nuevo_precio
+            producto.precio_manual = False
+            producto.save()
+            
+            return Response({
+                'mensaje': 'Precio reseteado exitosamente',
+                'producto_id': producto.id,
+                'precio_proveedor': float(producto.precio_proveedor),
+                'precio_nuevo': float(nuevo_precio)
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            return Response({
+                'error': f'Error al resetear precio: {str(e)}'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class OrderViewSet(viewsets.ModelViewSet):
     """
@@ -918,3 +972,139 @@ def bulk_update_markup(request):
             'success': False,
             'error': str(e)
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+# ============================================================
+# ENDPOINTS PARA MERCADO PAGO
+# ============================================================
+
+from .mercadopago_service import create_preference, process_payment_notification
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def create_mp_preference(request):
+    """
+    Crea un pedido y genera una preferencia de pago en Mercado Pago.
+    
+    POST /market/mp/create-preference/
+    """
+    try:
+        print("📦 Datos recibidos:", request.data)
+        
+        customer_data = request.data.get('customer_data', {})
+        shipping_data = request.data.get('shipping_data', {})
+        cart_items = request.data.get('cart_items', [])
+        total = float(request.data.get('total', 0))
+        costo_envio = float(request.data.get('costo_envio', 0))
+        
+        if not cart_items:
+            return Response({'success': False, 'error': 'Carrito vacío'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Construir dirección
+        direccion_completa = f"{shipping_data.get('calle', '')} {shipping_data.get('numero', '')}"
+        if shipping_data.get('piso'):
+            direccion_completa += f", Piso {shipping_data['piso']}"
+        if shipping_data.get('departamento'):
+            direccion_completa += f", Depto {shipping_data['departamento']}"
+        direccion_completa += f", {shipping_data.get('ciudad', '')}, {shipping_data.get('provincia', '')} - CP: {shipping_data.get('codigo_postal', '')}"
+        
+        # Crear orden (solo con campos que existen en el modelo Order)
+        order_data = {
+            'usuario': request.user.username,
+            'direccion_envio': direccion_completa,
+            'estado': 'pendiente',
+            'detalles_input': [{
+                'watch_id': item.get('watch_id') or item.get('id_backend') or item.get('id'),
+                'cantidad': item.get('quantity', 1),
+                'precio_unitario': item.get('price', 0)
+            } for item in cart_items]
+        }
+        
+        print("📋 Order data preparada:", order_data)
+        
+        from .serializer import OrderSerializer
+        serializer = OrderSerializer(data=order_data, context={'request': request})
+        
+        if not serializer.is_valid():
+            print(f"❌ Error de validación del serializer: {serializer.errors}")
+            return Response({'success': False, 'error': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+        
+        order = serializer.save()
+        print(f"✅ Orden creada: #{order.id}")
+        
+        # Preparar items para MP
+        mp_items = [{'name': item.get('name', 'Producto'), 'quantity': item.get('quantity', 1), 'price': item.get('price', 0)} for item in cart_items]
+        if costo_envio > 0:
+            mp_items.append({'name': 'Envío', 'quantity': 1, 'price': costo_envio})
+        
+        mp_data = {
+            'order_id': order.id,
+            'items': mp_items,
+            'payer_email': customer_data.get('email', ''),
+            'payer_name': f"{customer_data.get('nombre', '')} {customer_data.get('apellido', '')}".strip(),
+            'payer_phone': customer_data.get('telefono_contacto', ''),
+            'payer_address': {
+                'street_name': shipping_data.get('calle', ''),
+                'street_number': shipping_data.get('numero', ''),
+                'zip_code': shipping_data.get('codigo_postal', '')
+            },
+            'total': total + costo_envio
+        }
+        
+        preference = create_preference(mp_data)
+        
+        return Response({
+            'success': True,
+            'order_id': order.id,
+            'preference_id': preference['preference_id'],
+            'init_point': preference['init_point']
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        print(f"❌ Error creando preferencia de MP: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return Response({'success': False, 'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['POST'])
+def mercadopago_webhook(request):
+    """
+    Webhook para recibir notificaciones de Mercado Pago.
+    POST /market/mp/webhook/
+    """
+    try:
+        topic = request.query_params.get('topic') or request.data.get('type')
+        resource_id = request.query_params.get('id') or request.data.get('data', {}).get('id')
+        
+        logger.info(f"Webhook MP - Topic: {topic}, ID: {resource_id}")
+        
+        if topic == 'payment' and resource_id:
+            payment_info = process_payment_notification(resource_id)
+            order_id = payment_info.get('order_id')
+            
+            if order_id:
+                try:
+                    order = Order.objects.get(id=order_id)
+                    
+                    if payment_info['status'] == 'approved':
+                        order.estado_pago = 'completado'
+                        order.estado = 'pagado'
+                    elif payment_info['status'] == 'pending':
+                        order.estado_pago = 'pendiente'
+                    elif payment_info['status'] in ['rejected', 'cancelled']:
+                        order.estado_pago = 'fallido'
+                    
+                    order.save()
+                    logger.info(f"Orden {order_id} actualizada: {payment_info['status']}")
+                    
+                except Order.DoesNotExist:
+                    logger.error(f"Orden {order_id} no encontrada")
+        
+        return Response({'status': 'ok'}, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        logger.error(f"Error en webhook MP: {str(e)}")
+        return Response({'status': 'error', 'message': str(e)}, status=status.HTTP_200_OK)
+
