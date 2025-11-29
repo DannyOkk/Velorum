@@ -2,6 +2,7 @@
 import mercadopago
 from django.conf import settings
 from decimal import Decimal
+import os
 
 def create_preference(order_data):
     """
@@ -31,8 +32,8 @@ def create_preference(order_data):
         })
     
     # URLs de retorno
-    base_url = settings.FRONTEND_URL if hasattr(settings, 'FRONTEND_URL') else 'http://localhost:3000'
-    backend_url = settings.BACKEND_URL if hasattr(settings, 'BACKEND_URL') else 'http://localhost:8000'
+    base_url = os.getenv("FRONTEND_URL", "http://localhost:3000").split(",")
+    backend_url = os.getenv("BACKEND_URL", "http://localhost:8000").split(",")
     
     preference_data = {
         "items": items,
