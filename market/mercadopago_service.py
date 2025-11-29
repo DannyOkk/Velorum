@@ -47,7 +47,13 @@ def create_preference(order_data):
                 "zip_code": order_data.get('payer_address', {}).get('zip_code', '')
             }
         },
-        #SOLO SE PUEDE PONER URLS COMPLETAS, NO F-STRINGS NI NADA.
+        """
+        No se puede usar localhost, ni variables con f-string, debe ser
+        una url diferente, para probar el pago pueden compartir los
+        puertos 3000 y 8000 desde "puertos" a la derecha de "terminal"
+        y pegar esa url antes de "/checkout"(la de 3000) y en "notification_url"
+        (la de 8000). Tambien necesitan las credenciales, pidanmelas y se las paso (Alexander)
+        """
         "back_urls": {
             "success": "http://localhost:3000/checkout/success",
             "failure": "http://localhost:3000/checkout/failure",
