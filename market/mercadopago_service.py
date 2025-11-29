@@ -31,10 +31,6 @@ def create_preference(order_data):
             "currency_id": "ARS"  # Pesos argentinos
         })
     
-    # URLs de retorno
-    base_url = os.getenv("FRONTEND_URL", "http://localhost:3000").split(",")
-    backend_url = os.getenv("BACKEND_URL", "http://localhost:8000").split(",")
-    
     preference_data = {
         "items": items,
         "payer": {
@@ -52,13 +48,13 @@ def create_preference(order_data):
             }
         },
         "back_urls": {
-            "success": f"{base_url}/checkout/success",
-            "failure": f"{base_url}/checkout/failure",
-            "pending": f"{base_url}/checkout/pending"
+            "success": "https://velorum-front.onrender.com/checkout/success",
+            "failure": "https://velorum-front.onrender.com/checkout/failure",
+            "pending": "https://velorum-front.onrender.com/checkout/pending"
         },
         "auto_return": "approved",
         "external_reference": str(order_data['order_id']),
-        "notification_url": f"{backend_url}/api/market/mp/webhook/",
+        "notification_url": "https://velorum-e5g2.onrender.com/api/market/mp/webhook/",
         "statement_descriptor": "VELORUM"
     }
     
