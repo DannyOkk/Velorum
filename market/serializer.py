@@ -94,7 +94,8 @@ class OrderSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Order
-        fields = ['id', 'usuario', 'usuario_detalle', 'fecha', 'estado', 'total', 'detalles', 'detalles_input', 'direccion_envio']
+        fields = ['id', 'usuario', 'usuario_detalle', 'fecha', 'estado', 'total', 'detalles', 'detalles_input', 
+                  'direccion_envio', 'costo_envio', 'codigo_postal', 'zona_envio', 'metodo_pago']
         read_only_fields = ['id', 'fecha', 'total']
         extra_kwargs = {
             'estado': {'default': 'pendiente', 'help_text': "Estado del pedido (default: pendiente)"}

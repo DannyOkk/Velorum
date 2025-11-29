@@ -1009,11 +1009,15 @@ def create_mp_preference(request):
             direccion_completa += f", Depto {shipping_data['departamento']}"
         direccion_completa += f", {shipping_data.get('ciudad', '')}, {shipping_data.get('provincia', '')} - CP: {shipping_data.get('codigo_postal', '')}"
         
-        # Crear orden (solo con campos que existen en el modelo Order)
+        # Crear orden con todos los datos de envío y pago
         order_data = {
             'usuario': request.user.username,
             'direccion_envio': direccion_completa,
             'estado': 'pendiente',
+            'costo_envio': costo_envio,
+            'codigo_postal': shipping_data.get('codigo_postal', ''),
+            'zona_envio': shipping_data.get('zona', ''),
+            'metodo_pago': 'Mercado Pago',
             'detalles_input': [{
                 'watch_id': item.get('watch_id') or item.get('id_backend') or item.get('id'),
                 'cantidad': item.get('quantity', 1),

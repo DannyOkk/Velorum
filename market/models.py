@@ -116,6 +116,12 @@ class Order(models.Model):
     estado = models.CharField(max_length=20, choices=ESTADOS, default='pendiente')
     direccion_envio = models.TextField(blank=True, default='')
     total = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    
+    # Datos adicionales de envío y pago
+    costo_envio = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    codigo_postal = models.CharField(max_length=10, blank=True, default='')
+    zona_envio = models.CharField(max_length=100, blank=True, default='')
+    metodo_pago = models.CharField(max_length=50, blank=True, default='')
 
     def total_update(self):
         self.total = sum(detalle.subtotal for detalle in self.detalles.all())
