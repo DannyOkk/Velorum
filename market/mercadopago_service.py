@@ -47,14 +47,15 @@ def create_preference(order_data):
                 "zip_code": order_data.get('payer_address', {}).get('zip_code', '')
             }
         },
+        #SOLO SE PUEDE PONER URLS COMPLETAS, NO F-STRINGS NI NADA.
         "back_urls": {
-            "success": "https://velorum-front.onrender.com/checkout/success",
-            "failure": "https://velorum-front.onrender.com/checkout/failure",
-            "pending": "https://velorum-front.onrender.com/checkout/pending"
+            "success": "http://localhost:3000/checkout/success",
+            "failure": "http://localhost:3000/checkout/failure",
+            "pending": "http://localhost:3000/checkout/pending"
         },
         "auto_return": "approved",
         "external_reference": str(order_data['order_id']),
-        "notification_url": "https://velorum-e5g2.onrender.com/api/market/mp/webhook/",
+        "notification_url": "http://localhost:8000/api/market/mp/webhook/",
         "statement_descriptor": "VELORUM"
     }
     
