@@ -13,21 +13,23 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 from pathlib import Path
 from datetime import timedelta
 import os
+from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+load_dotenv(BASE_DIR / ".env")
 
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-local-dev-key-change-in-production'
+SECRET_KEY = os.getenv("SECRET_KEY", "unsafe-local-dev-secret")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.getenv('DEBUG', 'False') == 'True'
+DEBUG = os.getenv("DEBUG", "False").lower() in ("1", "true", "yes")
 
-ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
+ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", ".onrender.com,.render.com,localhost").split(",")
 
 
 # Application definition
@@ -167,14 +169,9 @@ CORS_ALLOW_ALL_ORIGINS = True
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
-    "https://velorum-front.onrender.com",
 ]
 
 # Mercado Pago Configuration
 # Mercado Pago Configuration
 MERCADOPAGO_ACCESS_TOKEN = os.getenv('MERCADOPAGO_ACCESS_TOKEN', 'TEST-4465996122919556-112013-3b348094cef7d20c6e26358ae34779d1-183650403')
 MERCADOPAGO_PUBLIC_KEY = os.getenv('MERCADOPAGO_PUBLIC_KEY', 'TEST-86cf3df5-ce45-468f-bc58-782a35b1550e')
-
-# URLs for Mercado Pago (used in mercadopago_service.py)
-FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:3000')
-BACKEND_URL = os.getenv('BACKEND_URL', 'http://localhost:8000')
