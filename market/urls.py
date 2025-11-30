@@ -28,4 +28,7 @@ urlpatterns = [
     
     # Endpoint de códigos de descuento
     path('market/validar-codigo-descuento/', views.validar_codigo_descuento, name='validar-codigo-descuento'),
+    
+    # Endpoint de validación de checkout
+    path('market/validate-checkout/', views.validate_checkout_access, name='validate-checkout'),
 ]

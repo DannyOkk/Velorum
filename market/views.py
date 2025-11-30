@@ -7,6 +7,14 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework.parsers import JSONParser, MultiPartParser, FormParser
+from django.core.cache import cache
+from .checkout_security import (
+    validate_ip_similarity,
+    validate_user_agent_compatibility,
+    can_use_token,
+    increment_token_usage
+)
+from .email_service import send_payment_confirmation
 
 # Create your views here.
 
@@ -1108,13 +1116,45 @@ def mercadopago_webhook(request):
                     if payment_info['status'] == 'approved':
                         order.estado_pago = 'completado'
                         order.estado = 'pagado'
+                        pay_estado = 'completado'
                     elif payment_info['status'] == 'pending':
                         order.estado_pago = 'pendiente'
+                        pay_estado = 'pendiente'
                     elif payment_info['status'] in ['rejected', 'cancelled']:
                         order.estado_pago = 'fallido'
+                        pay_estado = 'fallido'
+                    else:
+                        pay_estado = 'en_revision'
                     
                     order.save()
-                    logger.info(f"Orden {order_id} actualizada: {payment_info['status']}")
+                    
+                    # Crear o actualizar registro de pago
+                    pay, created = Pay.objects.get_or_create(
+                        pedido=order,
+                        external_id=str(payment_info['payment_id']),
+                        defaults={
+                            'metodo': 'tarjeta',
+                            'monto_pagado': payment_info['transaction_amount'],
+                            'estado': pay_estado,
+                            'metadata': {
+                                'payment_method_id': payment_info['payment_method_id'],
+                                'status_detail': payment_info['status_detail'],
+                                'mp_payment_id': payment_info['payment_id']
+                            }
+                        }
+                    )
+                    if not created:
+                        # Actualizar si ya existe
+                        pay.estado = pay_estado
+                        pay.monto_pagado = payment_info['transaction_amount']
+                        pay.metadata.update({
+                            'payment_method_id': payment_info['payment_method_id'],
+                            'status_detail': payment_info['status_detail'],
+                            'mp_payment_id': payment_info['payment_id']
+                        })
+                        pay.save()
+                    
+                    logger.info(f"Orden {order_id} actualizada: {payment_info['status']}, Pay {'creado' if created else 'actualizado'}")
                     
                 except Order.DoesNotExist:
                     logger.error(f"Orden {order_id} no encontrada")
@@ -1175,4 +1215,83 @@ def validar_codigo_descuento(request):
             'valido': False,
             'mensaje': 'Error al validar el código'
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['GET'])
+def validate_checkout_access(request):
+    """
+    Valida que el usuario tenga acceso legítimo a la página de checkout
+    """
+    token = request.GET.get('token')
+    order_id = request.GET.get('order')
+
+    if not token or not order_id:
+        return Response({'valid': False, 'error': 'Parámetros faltantes'}, status=400)
+
+    # Obtener token de cache
+    cache_key = f'checkout_token_{order_id}'
+    token_data = cache.get(cache_key)
+
+    if not token_data or token_data['token'] != token:
+        return Response({'valid': False, 'error': 'Token inválido o expirado'}, status=403)
+
+    # Validar que el token puede usarse
+    can_use, reason = can_use_token(token_data)
+    if not can_use:
+        return Response({'valid': False, 'error': reason}, status=403)
+
+    # Validación de IP
+    if settings.CHECKOUT_VALIDATE_IP:
+        user_ip = request.META.get('REMOTE_ADDR')
+        token_ip = token_data.get('ip_origen')
+        if not validate_ip_similarity(user_ip, token_ip):
+            return Response({'valid': False, 'error': 'Acceso desde IP no autorizada'}, status=403)
+
+    # Validación de User Agent
+    if settings.CHECKOUT_VALIDATE_USER_AGENT:
+        user_agent = request.META.get('HTTP_USER_AGENT')
+        token_user_agent = token_data.get('user_agent')
+        if user_agent and token_user_agent and not validate_user_agent_compatibility(user_agent, token_user_agent):
+            return Response({'valid': False, 'error': 'Acceso desde navegador no autorizado'}, status=403)
+
+    # Incrementar contador de usos
+    token_data = increment_token_usage(token_data)
+
+    # Verificar límite de usos
+    if token_data['usos'] >= settings.CHECKOUT_TOKEN_MAX_USOS:
+        cache.delete(cache_key)
+    else:
+        cache.set(cache_key, token_data, settings.CHECKOUT_TOKEN_EXPIRATION)
+
+    # Obtener datos de la orden
+    try:
+        order = Order.objects.select_related('usuario').prefetch_related('detalles__producto').get(id=order_id)
+
+        # Enviar email de confirmación si el pago está completado y no se ha enviado aún
+        if order.estado == 'pagado':
+            email_cache_key = f'payment_email_sent_{order_id}'
+            if not cache.get(email_cache_key):
+                try:
+                    send_payment_confirmation(order)
+                    cache.set(email_cache_key, True, 60*60*24*30)  # Cache por 30 días
+                    logger.info(f"Email de confirmación enviado para orden {order_id}")
+                except Exception as e:
+                    logger.error(f"Error enviando email para orden {order_id}: {str(e)}")
+
+        return Response({
+            'valid': True,
+            'order': {
+                'id': order.id,
+                'total': order.total,
+                'estado': order.estado,
+                'usuario': order.usuario.username if order.usuario else None,
+                'productos': list(order.detalles.values(
+                    'producto__nombre',
+                    'cantidad',
+                    'subtotal'
+                ))
+            }
+        })
+    except Order.DoesNotExist:
+        return Response({'valid': False, 'error': 'Orden no encontrada'}, status=404)
 

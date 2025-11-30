@@ -1,12 +1,14 @@
 # Servicio de Mercado Pago
 import mercadopago
 from django.conf import settings
+from django.core.cache import cache
 from decimal import Decimal
 import os
+from .checkout_security import generate_checkout_token, create_token_data
 
-def create_preference(order_data):
+def create_preference(order_data, request=None):
     """
-    Crea una preferencia de pago en Mercado Pago
+    Crea una preferencia de pago en Mercado Pago con tokens de seguridad
     
     Args:
         order_data: dict con datos del pedido
@@ -14,12 +16,25 @@ def create_preference(order_data):
             - items: lista de productos
             - payer_email: email del comprador
             - total: total del pedido
+        request: HttpRequest object (opcional, para generar tokens de seguridad)
     
     Returns:
-        dict con preference_id e init_point
+        dict con preference_id, init_point y checkout_token
     """
     # Inicializar SDK de Mercado Pago
     sdk = mercadopago.SDK(settings.MERCADOPAGO_ACCESS_TOKEN)
+    
+    # Generar token de seguridad si hay request
+    checkout_token = None
+    if request:
+        checkout_token = generate_checkout_token()
+        token_data = create_token_data(checkout_token, request)
+        
+        # Guardar token en cache
+        cache_key = f'checkout_token_{order_data["order_id"]}'
+        cache.set(cache_key, token_data, settings.CHECKOUT_TOKEN_EXPIRATION)
+        
+        print(f"🔐 Token de checkout generado: {checkout_token[:20]}...")
     
     # Preparar items para MP
     items = []
@@ -55,9 +70,9 @@ def create_preference(order_data):
         (la de 8000). Tambien necesitan las credenciales, pidanmelas y se las paso (Alexander)
         """
         "back_urls": {
-            "success": "http://localhost:3000/checkout/success",
-            "failure": "http://localhost:3000/checkout/failure",
-            "pending": "http://localhost:3000/checkout/pending"
+            "success": f"http://localhost:3000/checkout/success?token={checkout_token}&order={order_data['order_id']}" if checkout_token else "http://localhost:3000/checkout/success",
+            "failure": f"http://localhost:3000/checkout/failure?token={checkout_token}&order={order_data['order_id']}" if checkout_token else "http://localhost:3000/checkout/failure",
+            "pending": f"http://localhost:3000/checkout/pending?token={checkout_token}&order={order_data['order_id']}" if checkout_token else "http://localhost:3000/checkout/pending"
         },
         "auto_return": "approved",
         "external_reference": str(order_data['order_id']),
@@ -88,7 +103,8 @@ def create_preference(order_data):
     return {
         "preference_id": preference["id"],
         "init_point": preference["init_point"],  # URL para redirigir al usuario
-        "sandbox_init_point": preference.get("sandbox_init_point", "")  # URL de prueba
+        "sandbox_init_point": preference.get("sandbox_init_point", ""),  # URL de prueba
+        "checkout_token": checkout_token  # Token de seguridad generado
     }
 
 
