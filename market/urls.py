@@ -11,6 +11,7 @@ router.register(r'shipment', views.ShipmentViewSet, basename='shipment')
 router.register(r'cart', views.CartViewSet, basename='cart')
 router.register(r'cart-items', views.CartItemViewSet, basename='cartitem')  # ⭐ NUEVA LÍNEA
 router.register(r'favorites', views.FavoriteViewSet, basename='favorites')
+router.register(r'codigos-descuento', views.CodigoDescuentoViewSet, basename='codigo-descuento')
 
 urlpatterns = [
     path('market/model/', include(router.urls)),
@@ -24,4 +25,7 @@ urlpatterns = [
     # Endpoints de Mercado Pago
     path('market/mp/create-preference/', views.create_mp_preference, name='mp-create-preference'),
     path('market/mp/webhook/', views.mercadopago_webhook, name='mp-webhook'),
+    
+    # Endpoint de códigos de descuento
+    path('market/validar-codigo-descuento/', views.validar_codigo_descuento, name='validar-codigo-descuento'),
 ]

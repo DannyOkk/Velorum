@@ -5,7 +5,7 @@ from .models import *
 from Velorum.permissions import *
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework.parsers import JSONParser, MultiPartParser, FormParser
 
 # Create your views here.
@@ -177,6 +177,19 @@ class ProductViewSet(viewsets.ModelViewSet):
             return Response({
                 'error': f'Error al resetear precio: {str(e)}'
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class CodigoDescuentoViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet para gestionar códigos de descuento.
+    Solo administradores pueden crear, editar y eliminar códigos.
+    """
+    queryset = CodigoDescuento.objects.all()
+    serializer_class = CodigoDescuentoSerializer
+    permission_classes = [IsAdminUser]
+    
+    def get_queryset(self):
+        """Ordena por fecha de creación descendente"""
+        return CodigoDescuento.objects.all().order_by('-fecha_creacion')
 
 class OrderViewSet(viewsets.ModelViewSet):
     """
@@ -1111,4 +1124,55 @@ def mercadopago_webhook(request):
     except Exception as e:
         logger.error(f"Error en webhook MP: {str(e)}")
         return Response({'status': 'error', 'message': str(e)}, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+def validar_codigo_descuento(request):
+    """
+    Valida un código de descuento.
+    POST /market/validar-codigo-descuento/
+    Body: { "codigo": "MANOLITO", "monto_compra": 50000 }
+    """
+    try:
+        codigo_str = request.data.get('codigo', '').strip().upper()
+        monto_compra = float(request.data.get('monto_compra', 0))
+        
+        if not codigo_str:
+            return Response({
+                'valido': False,
+                'mensaje': 'Debes ingresar un código'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            codigo = CodigoDescuento.objects.get(codigo=codigo_str)
+        except CodigoDescuento.DoesNotExist:
+            return Response({
+                'valido': False,
+                'mensaje': 'Código de descuento no válido'
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        # Verificar si el código es válido
+        usuario = request.user if request.user.is_authenticated else None
+        puede_usar, mensaje = codigo.puede_usar(usuario, monto_compra)
+        
+        if not puede_usar:
+            return Response({
+                'valido': False,
+                'mensaje': mensaje
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Código válido
+        return Response({
+            'valido': True,
+            'codigo': codigo.codigo,
+            'porcentaje': float(codigo.porcentaje_descuento),
+            'descripcion': codigo.descripcion or f'{codigo.porcentaje_descuento}% de descuento'
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        logger.error(f"Error validando código de descuento: {str(e)}")
+        return Response({
+            'valido': False,
+            'mensaje': 'Error al validar el código'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 

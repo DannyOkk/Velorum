@@ -5,6 +5,17 @@ from rest_framework.exceptions import ValidationError
 from rest_framework import parsers
 import json
 
+class CodigoDescuentoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CodigoDescuento
+        fields = [
+            'id', 'codigo', 'descripcion', 'porcentaje_descuento', 
+            'activo', 'fecha_inicio', 'fecha_expiracion', 
+            'usos_maximos', 'usos_actuales', 'usos_por_usuario',
+            'monto_minimo', 'fecha_creacion', 'fecha_actualizacion'
+        ]
+        read_only_fields = ['usos_actuales', 'fecha_creacion', 'fecha_actualizacion', 'creado_por']
+
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Category

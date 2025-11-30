@@ -308,3 +308,103 @@ class Favorite(models.Model):
 
     def __str__(self):
         return f'{self.user} ♥ {self.product_id}'
+
+
+class CodigoDescuento(models.Model):
+    """Modelo para códigos de descuento de influencers o referidos"""
+    codigo = models.CharField(max_length=50, unique=True, db_index=True, help_text="Código único (ej: MANOLITO)")
+    descripcion = models.CharField(max_length=200, blank=True, help_text="Descripción del código (ej: Código de Manolito)")
+    porcentaje_descuento = models.DecimalField(max_digits=5, decimal_places=2, help_text="Porcentaje de descuento (ej: 10.00 para 10%)")
+    
+    # Control de activación
+    activo = models.BooleanField(default=True)
+    fecha_inicio = models.DateTimeField(null=True, blank=True, help_text="Fecha desde cuando es válido")
+    fecha_expiracion = models.DateTimeField(null=True, blank=True, help_text="Fecha hasta cuando es válido")
+    
+    # Límites de uso
+    usos_maximos = models.PositiveIntegerField(null=True, blank=True, help_text="Máximo de usos totales (dejar vacío para ilimitado)")
+    usos_por_usuario = models.PositiveIntegerField(default=1, help_text="Máximo de usos por usuario")
+    usos_actuales = models.PositiveIntegerField(default=0, editable=False)
+    
+    # Restricciones
+    monto_minimo = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, help_text="Monto mínimo de compra requerido")
+    
+    # Metadata
+    creado_por = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='codigos_creados')
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+    fecha_actualizacion = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.codigo} ({self.porcentaje_descuento}%)"
+    
+    def es_valido(self):
+        """Verifica si el código está activo y dentro del rango de fechas"""
+        if not self.activo:
+            return False, "Código no activo"
+        
+        ahora = timezone.now()
+        
+        if self.fecha_inicio and ahora < self.fecha_inicio:
+            return False, "Código aún no válido"
+        
+        if self.fecha_expiracion and ahora > self.fecha_expiracion:
+            return False, "Código expirado"
+        
+        if self.usos_maximos and self.usos_actuales >= self.usos_maximos:
+            return False, "Código agotado"
+        
+        return True, "Código válido"
+    
+    def puede_usar(self, usuario, monto_compra):
+        """Verifica si un usuario puede usar este código"""
+        valido, mensaje = self.es_valido()
+        if not valido:
+            return False, mensaje
+        
+        if self.monto_minimo and monto_compra < self.monto_minimo:
+            return False, f"Compra mínima requerida: ${self.monto_minimo}"
+        
+        # Verificar usos del usuario
+        if usuario and usuario.is_authenticated:
+            usos_usuario = UsoCodigoDescuento.objects.filter(
+                codigo=self,
+                usuario=usuario
+            ).count()
+            
+            if usos_usuario >= self.usos_por_usuario:
+                return False, "Ya usaste este código el máximo de veces"
+        
+        return True, "Código válido"
+    
+    def registrar_uso(self, orden, usuario=None):
+        """Registra el uso del código"""
+        self.usos_actuales += 1
+        self.save(update_fields=['usos_actuales'])
+        
+        UsoCodigoDescuento.objects.create(
+            codigo=self,
+            orden=orden,
+            usuario=usuario
+        )
+    
+    class Meta:
+        verbose_name = "Código de Descuento"
+        verbose_name_plural = "Códigos de Descuento"
+        ordering = ['-fecha_creacion']
+
+
+class UsoCodigoDescuento(models.Model):
+    """Registro de uso de códigos de descuento"""
+    codigo = models.ForeignKey(CodigoDescuento, on_delete=models.CASCADE, related_name='usos')
+    orden = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='codigos_usados')
+    usuario = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
+    fecha_uso = models.DateTimeField(auto_now_add=True)
+    monto_descuento = models.DecimalField(max_digits=10, decimal_places=2, help_text="Monto del descuento aplicado")
+
+    def __str__(self):
+        return f"{self.codigo.codigo} usado en orden {self.orden.id}"
+    
+    class Meta:
+        verbose_name = "Uso de Código"
+        verbose_name_plural = "Usos de Códigos"
+        ordering = ['-fecha_uso']
