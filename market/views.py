@@ -8,6 +8,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework.parsers import JSONParser, MultiPartParser, FormParser
 from django.core.cache import cache
+from django.utils import timezone
 from .email_service import send_payment_confirmation
 
 # Create your views here.
@@ -1111,6 +1112,22 @@ def mercadopago_webhook(request):
                         order.estado_pago = 'completado'
                         order.estado = 'pagado'
                         pay_estado = 'completado'
+                        
+                        # Enviar email de confirmación solo si no se envió antes
+                        if not order.email_confirmacion_enviado:
+                            try:
+                                from .email_service import send_payment_confirmation
+                                email_sent = send_payment_confirmation(order, payment_info)
+                                
+                                if email_sent:
+                                    order.email_confirmacion_enviado = True
+                                    order.email_confirmacion_fecha = timezone.now()
+                                    logger.info(f"✅ Email de confirmación enviado para orden {order_id}")
+                                else:
+                                    logger.error(f"❌ No se pudo enviar email de confirmación para orden {order_id} - se reintentará")
+                            except Exception as e:
+                                logger.error(f"❌ Excepción enviando email de confirmación: {str(e)}")
+                                # No fallar el webhook si el email falla
                     elif payment_info['status'] == 'pending':
                         order.estado_pago = 'pendiente'
                         pay_estado = 'pendiente'
@@ -1252,26 +1269,8 @@ def validate_checkout_access(request):
         # Obtener la orden
         order = Order.objects.select_related('usuario').prefetch_related('detalles__producto').get(id=order_id)
         
-        # Verificar que no se haya enviado email antes
-        email_sent_key = f'payment_email_sent_{order_id}'
-        email_already_sent = cache.get(email_sent_key)
-        
-        # Enviar email solo si:
-        # 1. No se envió antes
-        # 2. El pedido está pagado
-        # 3. Hay información de pago válida
-        if not email_already_sent and order.estado == 'pagado' and payment_id:
-            try:
-                payment_data = payment_info if 'payment_info' in locals() else process_payment_notification(payment_id)
-                send_payment_confirmation(order, payment_data)
-                cache.set(email_sent_key, True, 2592000)  # 30 días
-                logger.info(f"Email enviado para orden {order_id}")
-            except Exception as e:
-                logger.error(f"Error enviando email: {str(e)}")
-        
         return Response({
             'valid': True,
-            'email_sent': not email_already_sent,
             'order': {
                 'id': order.id,
                 'total': order.total,
