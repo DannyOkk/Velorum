@@ -29,7 +29,7 @@ SECRET_KEY = os.getenv("SECRET_KEY", "unsafe-local-dev-secret")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv("DEBUG", "False").lower() in ("1", "true", "yes")
 
-ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", ".onrender.com,.render.com,localhost").split(",")
+ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", ".onrender.com,.render.com,localhost,velorum-0821.onrender.com").split(",")
 
 
 # Application definition
@@ -168,9 +168,9 @@ SIMPLE_JWT = {
 
 CORS_ALLOW_ALL_ORIGINS = True
 
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",
-]
+CSRF_TRUSTED_ORIGINS = os.getenv('CSRF_TRUSTED_ORIGINS', 'http://localhost:3000')
+
+CORS_ALLOWED_ORIGINS = os.getenv('CORS_ALLOWED_ORIGINS', 'http://localhost:3000')
 
 # Email Configuration
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
