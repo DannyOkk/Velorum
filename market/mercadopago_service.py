@@ -63,20 +63,20 @@ def create_preference(order_data, request=None):
             }
         },
         """
-        No se puede usar localhost, ni variables con f-string, debe ser
+        No se puede usar localhost, debe ser
         una url diferente, para probar el pago pueden compartir los
         puertos 3000 y 8000 desde "puertos" a la derecha de "terminal"
         y pegar esa url antes de "/checkout"(la de 3000) y en "notification_url"
         (la de 8000). Tambien necesitan las credenciales, pidanmelas y se las paso (Alexander)
         """
         "back_urls": {
-            "success": f"http://localhost:3000/checkout/success?token={checkout_token}&order={order_data['order_id']}" if checkout_token else "http://localhost:3000/checkout/success",
-            "failure": f"http://localhost:3000/checkout/failure?token={checkout_token}&order={order_data['order_id']}" if checkout_token else "http://localhost:3000/checkout/failure",
-            "pending": f"http://localhost:3000/checkout/pending?token={checkout_token}&order={order_data['order_id']}" if checkout_token else "http://localhost:3000/checkout/pending"
+            "success": f"https://velorum-front.onrender.com/checkout/success?token={checkout_token}&order={order_data['order_id']}" if checkout_token else "https://velorum-front.onrender.com/checkout/success",
+            "failure": f"https://velorum-front.onrender.com/checkout/failure?token={checkout_token}&order={order_data['order_id']}" if checkout_token else "https://velorum-front.onrender.com/checkout/failure",
+            "pending": f"https://velorum-front.onrender.com/checkout/pending?token={checkout_token}&order={order_data['order_id']}" if checkout_token else "https://velorum-front.onrender.com/checkout/pending"
         },
         "auto_return": "approved",
         "external_reference": str(order_data['order_id']),
-        "notification_url": "http://localhost:8000/api/market/mp/webhook/",
+        "notification_url": "https://velorum-0821.onrender.com/api/market/mp/webhook/",
         "statement_descriptor": "VELORUM"
     }
     
