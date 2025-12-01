@@ -171,7 +171,29 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
 ]
 
-# Mercado Pago Configuration
+# Email Configuration
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
+DEFAULT_FROM_EMAIL = 'Velorum <noreply@velorum.com>'
+
 # Mercado Pago Configuration
 MERCADOPAGO_ACCESS_TOKEN = os.getenv('MERCADOPAGO_ACCESS_TOKEN', 'TEST-4465996122919556-112013-3b348094cef7d20c6e26358ae34779d1-183650403')
 MERCADOPAGO_PUBLIC_KEY = os.getenv('MERCADOPAGO_PUBLIC_KEY', 'TEST-86cf3df5-ce45-468f-bc58-782a35b1550e')
+
+# Cache Configuration
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.filebased.FileBasedCache',
+        'LOCATION': BASE_DIR / 'cache',
+    }
+}
+
+# Checkout Security Settings
+CHECKOUT_TOKEN_MAX_USOS = 3
+CHECKOUT_TOKEN_EXPIRATION = 1800  # 30 minutos en segundos
+CHECKOUT_VALIDATE_IP = True
+CHECKOUT_VALIDATE_USER_AGENT = True
