@@ -50,7 +50,7 @@ def send_payment_confirmation(order, payment_info, max_retries=3):
         try:
             logger.info(f"Intento {attempt}/{max_retries} de envío de email para orden {order.id}")
             
-            # Enviar email con timeout
+            # Enviar email
             send_mail(
                 subject=subject,
                 message=plain_message,
@@ -58,7 +58,6 @@ def send_payment_confirmation(order, payment_info, max_retries=3):
                 recipient_list=[order.usuario.email],
                 html_message=html_message,
                 fail_silently=False,
-                timeout=10,  # Timeout de 10 segundos
             )
             
             logger.info(f"✅ Email enviado exitosamente a {order.usuario.email} para pedido #{order.id}")

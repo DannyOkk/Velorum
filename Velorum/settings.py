@@ -195,6 +195,7 @@ EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
+EMAIL_TIMEOUT = 10  # Timeout en segundos para conexiones SMTP
 DEFAULT_FROM_EMAIL = 'Velorum <noreply@velorum.com>'
 
 # Mercado Pago Configuration
