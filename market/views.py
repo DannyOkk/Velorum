@@ -9,7 +9,6 @@ from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework.parsers import JSONParser, MultiPartParser, FormParser
 from django.core.cache import cache
 from django.utils import timezone
-from .email_service import send_payment_confirmation
 
 # Create your views here.
 
@@ -1112,22 +1111,6 @@ def mercadopago_webhook(request):
                         order.estado_pago = 'completado'
                         order.estado = 'pagado'
                         pay_estado = 'completado'
-                        
-                        # Enviar email de confirmación solo si no se envió antes
-                        if not order.email_confirmacion_enviado:
-                            try:
-                                from .email_service import send_payment_confirmation
-                                email_sent = send_payment_confirmation(order, payment_info)
-                                
-                                if email_sent:
-                                    order.email_confirmacion_enviado = True
-                                    order.email_confirmacion_fecha = timezone.now()
-                                    logger.info(f"✅ Email de confirmación enviado para orden {order_id}")
-                                else:
-                                    logger.error(f"❌ No se pudo enviar email de confirmación para orden {order_id} - se reintentará")
-                            except Exception as e:
-                                logger.error(f"❌ Excepción enviando email de confirmación: {str(e)}")
-                                # No fallar el webhook si el email falla
                     elif payment_info['status'] == 'pending':
                         order.estado_pago = 'pendiente'
                         pay_estado = 'pendiente'
