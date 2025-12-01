@@ -192,9 +192,3 @@ CACHES = {
         'LOCATION': BASE_DIR / 'cache',
     }
 }
-
-# Checkout Security Settings
-CHECKOUT_TOKEN_MAX_USOS = 3
-CHECKOUT_TOKEN_EXPIRATION = 1800  # 30 minutos en segundos
-CHECKOUT_VALIDATE_IP = True
-CHECKOUT_VALIDATE_USER_AGENT = True

@@ -8,12 +8,6 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework.parsers import JSONParser, MultiPartParser, FormParser
 from django.core.cache import cache
-from .checkout_security import (
-    validate_ip_similarity,
-    validate_user_agent_compatibility,
-    can_use_token,
-    increment_token_usage
-)
 from .email_service import send_payment_confirmation
 
 # Create your views here.
@@ -1220,71 +1214,69 @@ def validar_codigo_descuento(request):
 @api_view(['GET'])
 def validate_checkout_access(request):
     """
-    Valida que el usuario tenga acceso legítimo a la página de checkout
+    Valida que el acceso provenga de Mercado Pago usando sus parámetros automáticos
     """
-    token = request.GET.get('token')
-    order_id = request.GET.get('order')
-
-    if not token or not order_id:
-        return Response({'valid': False, 'error': 'Parámetros faltantes'}, status=400)
-
-    # Obtener token de cache
-    cache_key = f'checkout_token_{order_id}'
-    token_data = cache.get(cache_key)
-
-    if not token_data or token_data['token'] != token:
-        return Response({'valid': False, 'error': 'Token inválido o expirado'}, status=403)
-
-    # Validar que el token puede usarse
-    can_use, reason = can_use_token(token_data)
-    if not can_use:
-        return Response({'valid': False, 'error': reason}, status=403)
-
-    # Validación de IP
-    if settings.CHECKOUT_VALIDATE_IP:
-        user_ip = request.META.get('REMOTE_ADDR')
-        token_ip = token_data.get('ip_origen')
-        if not validate_ip_similarity(user_ip, token_ip):
-            return Response({'valid': False, 'error': 'Acceso desde IP no autorizada'}, status=403)
-
-    # Validación de User Agent
-    if settings.CHECKOUT_VALIDATE_USER_AGENT:
-        user_agent = request.META.get('HTTP_USER_AGENT')
-        token_user_agent = token_data.get('user_agent')
-        if user_agent and token_user_agent and not validate_user_agent_compatibility(user_agent, token_user_agent):
-            return Response({'valid': False, 'error': 'Acceso desde navegador no autorizado'}, status=403)
-
-    # Incrementar contador de usos
-    token_data = increment_token_usage(token_data)
-
-    # Verificar límite de usos
-    if token_data['usos'] >= settings.CHECKOUT_TOKEN_MAX_USOS:
-        cache.delete(cache_key)
-    else:
-        cache.set(cache_key, token_data, settings.CHECKOUT_TOKEN_EXPIRATION)
-
-    # Obtener datos de la orden
+    # Parámetros que MP agrega automáticamente
+    payment_id = request.GET.get('payment_id') or request.GET.get('collection_id')
+    external_reference = request.GET.get('external_reference')
+    preference_id = request.GET.get('preference_id')
+    
+    # Si no hay parámetros de MP, es acceso directo no autorizado
+    if not payment_id and not preference_id:
+        return Response({
+            'valid': False,
+            'error': 'Acceso no autorizado - debe venir desde Mercado Pago'
+        }, status=403)
+    
+    # Obtener order_id del external_reference
+    order_id = external_reference
+    
+    if not order_id:
+        return Response({
+            'valid': False,
+            'error': 'No se pudo identificar el pedido'
+        }, status=400)
+    
     try:
+        # Verificar que el pago sea real consultando a MP
+        if payment_id:
+            payment_info = process_payment_notification(payment_id)
+            
+            # Verificar que el payment_id corresponda a esta orden
+            if str(payment_info.get('order_id')) != str(order_id):
+                return Response({
+                    'valid': False,
+                    'error': 'El pago no corresponde a esta orden'
+                }, status=403)
+        
+        # Obtener la orden
         order = Order.objects.select_related('usuario').prefetch_related('detalles__producto').get(id=order_id)
-
-        # Enviar email de confirmación si el pago está completado y no se ha enviado aún
-        if order.estado == 'pagado':
-            email_cache_key = f'payment_email_sent_{order_id}'
-            if not cache.get(email_cache_key):
-                try:
-                    send_payment_confirmation(order)
-                    cache.set(email_cache_key, True, 60*60*24*30)  # Cache por 30 días
-                    logger.info(f"Email de confirmación enviado para orden {order_id}")
-                except Exception as e:
-                    logger.error(f"Error enviando email para orden {order_id}: {str(e)}")
-
+        
+        # Verificar que no se haya enviado email antes
+        email_sent_key = f'payment_email_sent_{order_id}'
+        email_already_sent = cache.get(email_sent_key)
+        
+        # Enviar email solo si:
+        # 1. No se envió antes
+        # 2. El pedido está pagado
+        # 3. Hay información de pago válida
+        if not email_already_sent and order.estado == 'pagado' and payment_id:
+            try:
+                payment_data = payment_info if 'payment_info' in locals() else process_payment_notification(payment_id)
+                send_payment_confirmation(order, payment_data)
+                cache.set(email_sent_key, True, 2592000)  # 30 días
+                logger.info(f"Email enviado para orden {order_id}")
+            except Exception as e:
+                logger.error(f"Error enviando email: {str(e)}")
+        
         return Response({
             'valid': True,
+            'email_sent': not email_already_sent,
             'order': {
                 'id': order.id,
                 'total': order.total,
                 'estado': order.estado,
-                'usuario': order.usuario.username if order.usuario else None,
+                'usuario': order.usuario.username if order.usuario else 'Invitado',
                 'productos': list(order.detalles.values(
                     'producto__nombre',
                     'cantidad',
@@ -1292,6 +1284,16 @@ def validate_checkout_access(request):
                 ))
             }
         })
+        
     except Order.DoesNotExist:
-        return Response({'valid': False, 'error': 'Orden no encontrada'}, status=404)
+        return Response({
+            'valid': False,
+            'error': 'Orden no encontrada'
+        }, status=404)
+    except Exception as e:
+        logger.error(f"Error validando acceso: {str(e)}")
+        return Response({
+            'valid': False,
+            'error': 'Error al validar el acceso'
+        }, status=500)
 
