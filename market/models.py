@@ -122,10 +122,6 @@ class Order(models.Model):
     codigo_postal = models.CharField(max_length=10, blank=True, default='')
     zona_envio = models.CharField(max_length=100, blank=True, default='')
     metodo_pago = models.CharField(max_length=50, blank=True, default='')
-    
-    # Tracking de email de confirmación
-    email_confirmacion_enviado = models.BooleanField(default=False)
-    email_confirmacion_fecha = models.DateTimeField(null=True, blank=True)
 
     def total_update(self):
         self.total = sum(detalle.subtotal for detalle in self.detalles.all())
