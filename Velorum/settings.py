@@ -29,7 +29,29 @@ SECRET_KEY = os.getenv("SECRET_KEY", "unsafe-local-dev-secret")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv("DEBUG", "False").lower() in ("1", "true", "yes")
 
-ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", ".onrender.com,.render.com,localhost,velorum-0821.onrender.com").split(",")
+
+# CORS/CSRF
+# Usa listas, no strings. Deben incluir esquema (http:// o https://)
+def env_list(name, default=""):
+    val = os.getenv(name, default)
+    return [v.strip() for v in val.split(",") if v.strip()]
+
+CORS_ALLOW_ALL_ORIGINS = True
+
+CORS_ALLOWED_ORIGINS = env_list(
+    "CORS_ALLOWED_ORIGINS",
+    "http://localhost:3000,https://velorum-front.onrender.com"
+)
+
+CSRF_TRUSTED_ORIGINS = env_list(
+    "CSRF_TRUSTED_ORIGINS",
+    "http://localhost:3000,https://velorum-front.onrender.com"
+)
+
+ALLOWED_HOSTS = env_list(
+    "ALLOWED_HOSTS",
+    ".onrender.com,.render.com,localhost,velorum-0821.onrender.com"
+)
 
 
 # Application definition
@@ -165,12 +187,6 @@ SIMPLE_JWT = {
     'SLIDING_TOKEN_LIFETIME': timedelta(minutes=5),
     'SLIDING_TOKEN_REFRESH_LIFETIME': timedelta(days=1),
 }
-
-CORS_ALLOW_ALL_ORIGINS = True
-
-CSRF_TRUSTED_ORIGINS = os.getenv('CSRF_TRUSTED_ORIGINS', 'http://localhost:3000')
-
-CORS_ALLOWED_ORIGINS = os.getenv('CORS_ALLOWED_ORIGINS', 'http://localhost:3000')
 
 # Email Configuration
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
