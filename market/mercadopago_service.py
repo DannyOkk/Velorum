@@ -50,13 +50,6 @@ def create_preference(order_data, request=None):
                 "zip_code": order_data.get('payer_address', {}).get('zip_code', '')
             }
         },
-        """
-        No se puede usar localhost, debe ser
-        una url diferente, para probar el pago pueden compartir los
-        puertos 3000 y 8000 desde "puertos" a la derecha de "terminal"
-        y pegar esa url antes de "/checkout"(la de 3000) y en "notification_url"
-        (la de 8000). Tambien necesitan las credenciales, pidanmelas y se las paso (Alexander)
-        """
         "back_urls": {
             "success": "https://velorum-front.onrender.com/checkout/success",
             "failure": "https://velorum-front.onrender.com/checkout/failure",
