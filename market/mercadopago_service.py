@@ -46,6 +46,18 @@ def create_preference(order_data, request=None):
             "currency_id": "ARS"  # Pesos argentinos
         })
     
+    # Preparar URLs antes del diccionario
+    base_url = "https://velorum-front.onrender.com/checkout"
+    
+    if checkout_token:
+        success_url = f"{base_url}/success?token={checkout_token}&order={order_data['order_id']}"
+        failure_url = f"{base_url}/failure?token={checkout_token}&order={order_data['order_id']}"
+        pending_url = f"{base_url}/pending?token={checkout_token}&order={order_data['order_id']}"
+    else:
+        success_url = f"{base_url}/success"
+        failure_url = f"{base_url}/failure"
+        pending_url = f"{base_url}/pending"
+    
     preference_data = {
         "items": items,
         "payer": {
@@ -70,9 +82,9 @@ def create_preference(order_data, request=None):
         (la de 8000). Tambien necesitan las credenciales, pidanmelas y se las paso (Alexander)
         """
         "back_urls": {
-            "success": f"https://velorum-front.onrender.com/checkout/success?token={checkout_token}&order={order_data['order_id']}" if checkout_token else "https://velorum-front.onrender.com/checkout/success",
-            "failure": f"https://velorum-front.onrender.com/checkout/failure?token={checkout_token}&order={order_data['order_id']}" if checkout_token else "https://velorum-front.onrender.com/checkout/failure",
-            "pending": f"https://velorum-front.onrender.com/checkout/pending?token={checkout_token}&order={order_data['order_id']}" if checkout_token else "https://velorum-front.onrender.com/checkout/pending"
+            "success": success_url,
+            "failure": failure_url,
+            "pending": pending_url
         },
         "auto_return": "approved",
         "external_reference": str(order_data['order_id']),
