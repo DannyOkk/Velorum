@@ -50,13 +50,13 @@ def create_preference(order_data, request=None):
     base_url = "https://velorum-front.onrender.com/checkout"
     
     if checkout_token:
-        success_url = f"{base_url}/success?token={checkout_token}&order={order_data['order_id']}"
-        failure_url = f"{base_url}/failure?token={checkout_token}&order={order_data['order_id']}"
-        pending_url = f"{base_url}/pending?token={checkout_token}&order={order_data['order_id']}"
+        success_url = base_url + "/success?token=" + checkout_token + "&order=" + str(order_data['order_id'])
+        failure_url = base_url + "/failure?token=" + checkout_token + "&order=" + str(order_data['order_id'])
+        pending_url = base_url + "/pending?token=" + checkout_token + "&order=" + str(order_data['order_id'])
     else:
-        success_url = f"{base_url}/success"
-        failure_url = f"{base_url}/failure"
-        pending_url = f"{base_url}/pending"
+        success_url = base_url + "/success"
+        failure_url = base_url + "/failure"
+        pending_url = base_url + "/pending"
     
     preference_data = {
         "items": items,
