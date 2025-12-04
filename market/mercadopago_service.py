@@ -5,6 +5,20 @@ from django.core.cache import cache
 from decimal import Decimal
 import os
 
+FRONT_URL = os.getenv("FRONT_URL")
+
+if not FRONT_URL:
+    raise ValueError("FRONT_URL no está definida en el entorno.")
+
+FRONT_URL = FRONT_URL.rstrip("/")
+
+BACK_URL = os.getenv("BACK_URL")
+
+if not BACK_URL:
+    raise ValueError("BACK_URL no está definida en el entorno.")
+
+BACK_URL = BACK_URL.rstrip("/")
+
 def create_preference(order_data, request=None):
     """
     Crea una preferencia de pago en Mercado Pago
@@ -51,13 +65,13 @@ def create_preference(order_data, request=None):
             }
         },
         "back_urls": {
-            "success": "https://velorum-front.onrender.com/checkout/success",
-            "failure": "https://velorum-front.onrender.com/checkout/failure",
-            "pending": "https://velorum-front.onrender.com/checkout/pending"
+            "success": f"{FRONT_URL}/checkout/success/",
+            "failure": f"{FRONT_URL}/checkout/failure/",
+            "pending": f"{FRONT_URL}/checkout/pending/",
         },
         "auto_return": "approved",
         "external_reference": str(order_data['order_id']),
-        "notification_url": "https://velorum-0821.onrender.com/api/market/mp/webhook/",
+        "notification_url": F"{BACK_URL}/api/market/mp/webhook/",
         "statement_descriptor": "VELORUM"
     }
     
