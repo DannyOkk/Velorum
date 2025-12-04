@@ -87,9 +87,10 @@ class OrderSerializer(serializers.ModelSerializer):
     usuario = serializers.SlugRelatedField(
         queryset=User.objects.all(),
         slug_field='username',
-        required=True,
+        required=False,
+        allow_null=True,
         write_only=True,
-        help_text="Nombre de usuario del cliente que realiza el pedido. Debe existir en la base de datos."
+        help_text="Nombre de usuario del cliente que realiza el pedido. Opcional para compras de invitados."
     )
     
     # CAMBIO: Declaración directa del serializador de detalles.
