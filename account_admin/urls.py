@@ -1,6 +1,7 @@
 from django.urls import path, include 
 from rest_framework import routers
 from .views import *
+from .views_guest import register_with_order
 from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
@@ -21,4 +22,5 @@ urlpatterns = [
     path('change-password/', change_password, name='change_password'),
     path('users/', list_users, name='list_users'),  # GET - Listar usuarios
     path('users/<int:user_id>/', manage_user, name='manage_user'),  # GET, PUT, DELETE - Gestionar usuario específico
+    path('register-with-order/', register_with_order, name='register_with_order'),  # POST - Registrar después de compra
 ]

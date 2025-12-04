@@ -997,10 +997,10 @@ from .mercadopago_service import create_preference, process_payment_notification
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
 def create_mp_preference(request):
     """
     Crea un pedido y genera una preferencia de pago en Mercado Pago.
+    Permite compras tanto de usuarios autenticados como invitados.
     
     POST /market/mp/create-preference/
     """
@@ -1026,7 +1026,7 @@ def create_mp_preference(request):
         
         # Crear orden con todos los datos de envío y pago
         order_data = {
-            'usuario': request.user.username,
+            'usuario': request.user.username if request.user.is_authenticated else None,
             'direccion_envio': direccion_completa,
             'estado': 'pendiente',
             'costo_envio': costo_envio,
