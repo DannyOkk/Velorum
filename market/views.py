@@ -1292,6 +1292,10 @@ def validate_checkout_access(request):
                 'total': order.total,
                 'estado': order.estado,
                 'usuario': order.usuario.username if order.usuario else 'Invitado',
+                'email': order.usuario.email if order.usuario else order.email_invitado,
+                'email_invitado': order.email_invitado,
+                'nombre_invitado': order.nombre_invitado,
+                'telefono_invitado': order.telefono_invitado,
                 'productos': list(order.detalles.values(
                     'producto__nombre',
                     'cantidad',
