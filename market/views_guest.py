@@ -71,26 +71,18 @@ def register_with_order(request):
         print(f"✅ Username generado: {username}")
         
         with transaction.atomic():
-            # Crear usuario
-            user_data = {
-                'username': username,
-                'email': email,
-                'first_name': first_name,
-                'last_name': last_name,
-                'role': 'client'
-            }
-            
-            serializer = UserSerializer(data=user_data)
-            if not serializer.is_valid():
-                print(f"❌ Serializer inválido: {serializer.errors}")
-                return Response({
-                    'success': False,
-                    'error': serializer.errors
-                }, status=status.HTTP_400_BAD_REQUEST)
-            
-            user = serializer.save()
+            # Crear usuario directamente (sin serializer para evitar problemas con password)
+            user = User.objects.create(
+                username=username,
+                email=email,
+                first_name=first_name,
+                last_name=last_name,
+                role='client'
+            )
             user.set_password(password)
             user.save()
+            
+            print(f"✅ Usuario creado: {user.username} (ID: {user.id})")
             
             # Asociar orden si se provee order_id
             order_associated = False
