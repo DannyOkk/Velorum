@@ -120,6 +120,7 @@ class Order(models.Model):
     # Datos del invitado (si no está autenticado)
     email_invitado = models.EmailField(max_length=254, null=True, blank=True)
     nombre_invitado = models.CharField(max_length=200, null=True, blank=True)
+    apellido_invitado = models.CharField(max_length=200, null=True, blank=True)
     telefono_invitado = models.CharField(max_length=20, null=True, blank=True)
     
     # Datos adicionales de envío y pago

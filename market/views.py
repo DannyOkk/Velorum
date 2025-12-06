@@ -1064,7 +1064,8 @@ def create_mp_preference(request):
             'metodo_pago': 'Mercado Pago',
             # Datos del invitado
             'email_invitado': customer_data.get('email') if not request.user.is_authenticated else None,
-            'nombre_invitado': f"{customer_data.get('nombre', '')} {customer_data.get('apellido', '')}".strip() if not request.user.is_authenticated else None,
+            'nombre_invitado': customer_data.get('nombre') if not request.user.is_authenticated else None,
+            'apellido_invitado': customer_data.get('apellido') if not request.user.is_authenticated else None,
             'telefono_invitado': customer_data.get('telefono_contacto') if not request.user.is_authenticated else None,
             'detalles_input': [{
                 'watch_id': item.get('watch_id') or item.get('id_backend') or item.get('id'),
@@ -1295,6 +1296,7 @@ def validate_checkout_access(request):
                 'email': order.usuario.email if order.usuario else order.email_invitado,
                 'email_invitado': order.email_invitado,
                 'nombre_invitado': order.nombre_invitado,
+                'apellido_invitado': order.apellido_invitado,
                 'telefono_invitado': order.telefono_invitado,
                 'productos': list(order.detalles.values(
                     'producto__nombre',
