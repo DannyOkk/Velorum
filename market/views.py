@@ -1052,7 +1052,7 @@ def create_mp_preference(request):
             direccion_completa += f", Piso {shipping_data['piso']}"
         if shipping_data.get('departamento'):
             direccion_completa += f", Depto {shipping_data['departamento']}"
-        direccion_completa += f", {shipping_data.get('ciudad', '')}, {shipping_data.get('provincia', '')} - CP: {shipping_data.get('codigo_postal', '')}"
+        direccion_completa += f", {shipping_data.get('ciudad', '')}, {shipping_data.get('provincia', '')}"
         
         # Crear orden con todos los datos de envío y pago
         order_data = {
@@ -1061,7 +1061,7 @@ def create_mp_preference(request):
             'estado': 'pendiente',
             'costo_envio': costo_envio,
             'codigo_postal': shipping_data.get('codigo_postal', ''),
-            'zona_envio': shipping_data.get('zona', ''),
+            'zona_envio': shipping_data.get('zona_envio', ''),
             'metodo_pago': 'Mercado Pago',
             # Datos del invitado
             'email_invitado': customer_data.get('email') if not request.user.is_authenticated else None,
