@@ -42,17 +42,25 @@ def send_order_paid_notification(order):
         s = f"{val:,.2f}".replace(",", ".")
         return s
 
-    # Cliente
-    if getattr(order, 'usuario', None):
-        nombre = getattr(order.usuario, 'first_name', '') or ''
-        apellido = getattr(order.usuario, 'last_name', '') or ''
-        email = getattr(order.usuario, 'email', '') or ''
-        telefono = getattr(order.usuario, 'phone', '') or getattr(order.usuario, 'telefono', '') if hasattr(order.usuario, 'telefono') else getattr(order.usuario, 'phone', '')
-    else:
-        nombre = getattr(order, 'nombre_invitado', '') or ''
-        apellido = getattr(order, 'apellido_invitado', '') or ''
-        email = getattr(order, 'email_invitado', '') or ''
-        telefono = getattr(order, 'telefono_invitado', '') or ''
+    # Cliente: preferir datos de perfil, si están vacíos usar los datos del checkout guardados en la orden
+    def _prefer_profile_or_order(user_obj, order_obj, profile_attr, order_attr):
+        val = ''
+        if user_obj:
+            val = (getattr(user_obj, profile_attr, '') or '').strip()
+        if not val:
+            val = (getattr(order_obj, order_attr, '') or '').strip()
+        return val
+
+    user_obj = getattr(order, 'usuario', None)
+    nombre = _prefer_profile_or_order(user_obj, order, 'first_name', 'nombre_invitado')
+    apellido = _prefer_profile_or_order(user_obj, order, 'last_name', 'apellido_invitado')
+    email = _prefer_profile_or_order(user_obj, order, 'email', 'email_invitado')
+    # Teléfono puede llamarse 'phone' o 'telefono' en el perfil
+    telefono = ''
+    if user_obj:
+        telefono = (getattr(user_obj, 'phone', '') or getattr(user_obj, 'telefono', '') or '').strip()
+    if not telefono:
+        telefono = (getattr(order, 'telefono_invitado', '') or '').strip()
 
     # Dirección: intentar descomponer los elementos comunes
     direccion_raw = (getattr(order, 'direccion_envio', '') or '').strip()
