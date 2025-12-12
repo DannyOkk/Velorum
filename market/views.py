@@ -1063,11 +1063,11 @@ def create_mp_preference(request):
             'codigo_postal': shipping_data.get('codigo_postal', ''),
             'zona_envio': shipping_data.get('zona_envio', ''),
             'metodo_pago': 'Mercado Pago',
-            # Datos del invitado
-            'email_invitado': customer_data.get('email') if not request.user.is_authenticated else None,
-            'nombre_invitado': customer_data.get('nombre') if not request.user.is_authenticated else None,
-            'apellido_invitado': customer_data.get('apellido') if not request.user.is_authenticated else None,
-            'telefono_invitado': customer_data.get('telefono_contacto') if not request.user.is_authenticated else None,
+            # Datos del invitado / checkout: siempre guardar lo que llegó del checkout; si falta, fallback al perfil
+            'email_invitado': (customer_data.get('email') or (request.user.email if request.user.is_authenticated else '')).strip(),
+            'nombre_invitado': (customer_data.get('nombre') or (request.user.first_name if request.user.is_authenticated else '')).strip(),
+            'apellido_invitado': (customer_data.get('apellido') or (request.user.last_name if request.user.is_authenticated else '')).strip(),
+            'telefono_invitado': (customer_data.get('telefono_contacto') or (getattr(request.user, 'phone', None) or getattr(request.user, 'telefono', '') if request.user.is_authenticated else '')).strip(),
             'detalles_input': [{
                 'watch_id': item.get('watch_id') or item.get('id_backend') or item.get('id'),
                 'cantidad': item.get('quantity', 1),
