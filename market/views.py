@@ -9,6 +9,7 @@ from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework.parsers import JSONParser, MultiPartParser, FormParser
 from django.core.cache import cache
 from django.utils import timezone
+from .telegram import send_order_paid_notification
 
 # Create your views here.
 
@@ -1157,6 +1158,9 @@ def mercadopago_webhook(request):
                     order.save()
                     
                     # Crear o actualizar registro de pago
+                    existing_pay = Pay.objects.filter(pedido=order, external_id=str(payment_info['payment_id'])).first()
+                    previous_estado = existing_pay.estado if existing_pay else None
+
                     pay, created = Pay.objects.get_or_create(
                         pedido=order,
                         external_id=str(payment_info['payment_id']),
@@ -1181,8 +1185,23 @@ def mercadopago_webhook(request):
                             'mp_payment_id': payment_info['payment_id']
                         })
                         pay.save()
-                    
+
                     logger.info(f"Orden {order_id} actualizada: {payment_info['status']}, Pay {'creado' if created else 'actualizado'}")
+
+                    # Notificar a Telegram solo si el estado pasó a 'completado'
+                    try:
+                        should_notify = False
+                        if pay_estado == 'completado':
+                            if created:
+                                should_notify = True
+                            else:
+                                if previous_estado != 'completado':
+                                    should_notify = True
+
+                        if should_notify:
+                            send_order_paid_notification(order)
+                    except Exception:
+                        logger.exception('Error al enviar notificación a Telegram')
                     
                 except Order.DoesNotExist:
                     logger.error(f"Orden {order_id} no encontrada")
