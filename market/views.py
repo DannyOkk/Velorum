@@ -10,6 +10,7 @@ from rest_framework.parsers import JSONParser, MultiPartParser, FormParser
 from django.core.cache import cache
 from django.utils import timezone
 from .telegram import send_order_paid_notification
+from django.db.models import F, Q
 
 # Create your views here.
 
@@ -61,6 +62,12 @@ class ProductViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         queryset = Product.objects.all()
+
+            # 🔴 FILTRO: ocultar productos sin stock
+        queryset = queryset.filter(
+            Q(stock_ilimitado=True) |
+            Q(stock_proveedor__gt=F('stock_vendido'))
+        )
 
         # Clientes: ocultar productos desactivados
         user = self.request.user
