@@ -67,13 +67,6 @@ class ProductViewSet(viewsets.ModelViewSet):
         if not (hasattr(user, 'role') and user.role in ['admin', 'operator']):
             queryset = queryset.filter(desactivado=False)
 
-        # Filtrar productos sin stock (para todos los usuarios)
-        # Un producto tiene stock si: stock_ilimitado=True O stock_disponible > 0
-        from django.db.models import Q
-        queryset = queryset.filter(
-            Q(stock_ilimitado=True) | Q(stock_disponible__gt=0)
-        )
-
         params = self.request.query_params
 
         # Buscar por nombre (q o nombre)
