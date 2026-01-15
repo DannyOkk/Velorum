@@ -42,7 +42,7 @@ CATEGORIAS_CONFIG = {
     },
     'premium': {
         'url': f'{BASE_URL}/relojes-gama-premium',
-        'ids': [4015782, 4015783, 3937574, 3937575, 3937576, 3937577, 3937578, 3399726],
+        'ids': [4015782, 4015783, 3937574, 3937575, 3937576, 3937577, 3937578, 3399726, 4097575, 4097573],
         'categoria_nombre': 'Premium',
         'subcategorias': {
             4015782: 'BINBOND',
@@ -52,7 +52,9 @@ CATEGORIAS_CONFIG = {
             3937576: 'CASIO',
             3937577: 'RICHARD MILLE',
             3937578: 'HUBLOT',
-            3399726: 'Otros Premium'
+            3399726: 'Otros Premium',
+            4097575: 'AUDEMARS PIGUET',
+            4097573: 'TAG HEUER'
         }
     },
     'smartwatch': {
