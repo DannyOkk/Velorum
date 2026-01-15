@@ -1137,6 +1137,18 @@ def create_mp_preference(request):
         order = serializer.save()
         print(f"✅ Orden creada: #{order.id}")
         
+        # Registrar uso del código de descuento si existe
+        codigo_str = request.data.get('codigo_descuento')
+        if codigo_str:
+            try:
+                codigo = CodigoDescuento.objects.get(codigo=codigo_str)
+                from decimal import Decimal
+                monto_desc = Decimal(str(request.data.get('descuento_monto', 0)))
+                codigo.registrar_uso(order, request.user if request.user.is_authenticated else None, monto_desc)
+                print(f"✅ Código {codigo_str} registrado: usos_actuales={codigo.usos_actuales}")
+            except CodigoDescuento.DoesNotExist:
+                print(f"⚠️ Código {codigo_str} no encontrado")
+        
         # Preparar items para MP
         mp_items = [{'name': item.get('name', 'Producto'), 'quantity': item.get('quantity', 1), 'price': item.get('price', 0)} for item in cart_items]
         if costo_envio > 0:

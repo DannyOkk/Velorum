@@ -382,15 +382,17 @@ class CodigoDescuento(models.Model):
         
         return True, "Código válido"
     
-    def registrar_uso(self, orden, usuario=None):
+    def registrar_uso(self, orden, usuario=None, monto_descuento=0):
         """Registra el uso del código"""
+        from decimal import Decimal
         self.usos_actuales += 1
         self.save(update_fields=['usos_actuales'])
         
         UsoCodigoDescuento.objects.create(
             codigo=self,
             orden=orden,
-            usuario=usuario
+            usuario=usuario,
+            monto_descuento=Decimal(str(monto_descuento))
         )
     
     class Meta:
