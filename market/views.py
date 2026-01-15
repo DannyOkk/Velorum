@@ -34,6 +34,20 @@ class CategoryViewSet(viewsets.ModelViewSet):
             
         return queryset
 
+CATEGORY_GROUPS = {
+    "relojes": {
+        "ids": [3930925, 3937579, 3937580, 3991727, 2632928],
+    },
+    "premium": {
+        "ids": [4015782, 4015783, 3937574, 3937575, 3937576, 3937577, 3937578, 3399726, 4097575, 4097573],
+    },
+    # smartwatch no tiene subcategorías: decidimos por 1 id de categoría o por un flag/campo
+    # Si en tu BD smartwatch es una categoría específica, poné su id acá:
+    "smartwatch": {
+        "ids": [2632977],  # lo definimos en el paso 2
+    },
+}
+
 class ProductViewSet(viewsets.ModelViewSet):
     """
     ViewSet para gestionar productos.
@@ -46,28 +60,57 @@ class ProductViewSet(viewsets.ModelViewSet):
     parser_classes = [JSONParser, MultiPartParser, FormParser]
     
     def get_queryset(self):
-        """Permite filtrar productos por nombre, categoría o precio"""
         queryset = Product.objects.all()
-        
-        # Si el usuario no es admin/operator, ocultar productos desactivados
+
+        # Clientes: ocultar productos desactivados
         user = self.request.user
         if not (hasattr(user, 'role') and user.role in ['admin', 'operator']):
             queryset = queryset.filter(desactivado=False)
-        
-        nombre = self.request.query_params.get('nombre', None)
-        categoria = self.request.query_params.get('categoria', None)
-        precio_min = self.request.query_params.get('precio_min', None)
-        precio_max = self.request.query_params.get('precio_max', None)
-        
-        if nombre:
-            queryset = queryset.filter(nombre__icontains=nombre)
-        if categoria:
-            queryset = queryset.filter(categoria__id=categoria)
+
+        params = self.request.query_params
+
+        # Buscar por nombre (q o nombre)
+        q = params.get("q") or params.get("nombre")
+        if q:
+            queryset = queryset.filter(nombre__icontains=q)
+
+        # Filtro por grupo -> categorías reales (1,2,3)
+        categoria = (params.get("categoria") or "todos").strip().lower()
+        if categoria == "relojes":
+            queryset = queryset.filter(categoria_id=1)
+        elif categoria == "premium":
+            queryset = queryset.filter(categoria_id=2)
+        elif categoria == "smartwatch":
+            queryset = queryset.filter(categoria_id=3)
+        # "todos": no filtra
+
+        # Rango de precios
+        precio_min = params.get("precio_min")
+        precio_max = params.get("precio_max")
         if precio_min:
             queryset = queryset.filter(precio__gte=precio_min)
         if precio_max:
             queryset = queryset.filter(precio__lte=precio_max)
-            
+
+        # Orden
+        orden = (params.get("orden") or "").strip().lower()
+        if orden == "precio_asc":
+            queryset = queryset.order_by("precio")
+        elif orden == "precio_desc":
+            queryset = queryset.order_by("-precio")
+        elif orden == "az":
+            queryset = queryset.order_by("nombre")
+        elif orden == "za":
+            queryset = queryset.order_by("-nombre")
+        elif orden == "destacado":
+            # si no tenés campo destacado, cae al default
+            if hasattr(Product, "destacado"):
+                queryset = queryset.order_by("-destacado", "-id")
+            else:
+                queryset = queryset.order_by("-id")
+        else:
+            queryset = queryset.order_by("-id")
+
         return queryset
         
     @action(detail=True, methods=['post'], permission_classes=[AddToCartPermission])
