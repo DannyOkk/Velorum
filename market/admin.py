@@ -4,11 +4,41 @@ from .models import *
 # Register your models here.
 
 admin.site.register(Product)
-admin.site.register(Order)
 admin.site.register(OrderDetail)
 admin.site.register(Pay)
 admin.site.register(Category)
 admin.site.register(Shipment)
+
+@admin.register(Order)
+class OrderAdmin(admin.ModelAdmin):
+    list_display = ('id', 'usuario', 'get_nombre_cliente', 'get_email_cliente', 'fecha', 'total', 'estado', 'metodo_pago')
+    list_filter = ('estado', 'fecha', 'metodo_pago')
+    search_fields = ('id', 'usuario__username', 'email_invitado', 'nombre_invitado', 'apellido_invitado', 'dni_invitado')
+    readonly_fields = ('fecha', 'total')
+    
+    fieldsets = (
+        ('Cliente', {
+            'fields': ('usuario', 'nombre_invitado', 'apellido_invitado', 'email_invitado', 'telefono_invitado', 'dni_invitado')
+        }),
+        ('Pedido', {
+            'fields': ('estado', 'total', 'fecha', 'metodo_pago')
+        }),
+        ('Envío', {
+            'fields': ('direccion_envio', 'codigo_postal', 'zona_envio', 'costo_envio')
+        }),
+    )
+    
+    def get_nombre_cliente(self, obj):
+        if obj.usuario:
+            return f"{obj.usuario.first_name} {obj.usuario.last_name}".strip() or obj.usuario.username
+        return f"{obj.nombre_invitado or ''} {obj.apellido_invitado or ''}".strip() or 'Invitado'
+    get_nombre_cliente.short_description = 'Nombre'
+    
+    def get_email_cliente(self, obj):
+        if obj.usuario:
+            return obj.usuario.email
+        return obj.email_invitado or 'N/A'
+    get_email_cliente.short_description = 'Email'
 
 @admin.register(Favorite)
 class FavoriteAdmin(admin.ModelAdmin):
