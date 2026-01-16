@@ -280,6 +280,7 @@ class OrderViewSet(viewsets.ModelViewSet):
     queryset = Order.objects.all()
     serializer_class = OrderSerializer
     permission_classes = [OrderPermission]
+    pagination_class = None  # Desactivar paginación para traer todas las órdenes
     
     def get_queryset(self):
         """
