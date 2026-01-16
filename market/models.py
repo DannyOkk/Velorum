@@ -130,7 +130,8 @@ class Order(models.Model):
     metodo_pago = models.CharField(max_length=50, blank=True, default='')
 
     def total_update(self):
-        self.total = sum(detalle.subtotal for detalle in self.detalles.all())
+        subtotal = sum(detalle.subtotal for detalle in self.detalles.all())
+        self.total = subtotal + self.costo_envio
         self.save()
 
     def save(self, *args, **kwargs):

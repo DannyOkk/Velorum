@@ -202,9 +202,10 @@ class OrderSerializer(serializers.ModelSerializer):
             producto.save()
             print(f"📊 Stock vendido actualizado: {producto.stock_vendido}")
         
-        # Actualizar total de la orden
-        order.total_update()
-        print(f"💰 Total de la orden: {order.total}")
+        # NO recalcular total — ya viene correcto del frontend con descuentos aplicados
+        # order.total_update()  # Comentado: el total ya incluye descuentos y envío
+        print(f"💰 Total de la orden (del frontend): {order.total}")
+        print(f"💰 Costo de envío: {order.costo_envio}")
         
         return order
 

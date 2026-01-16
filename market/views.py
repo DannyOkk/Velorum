@@ -1110,6 +1110,7 @@ def create_mp_preference(request):
             'usuario': request.user if request.user.is_authenticated else None,
             'direccion_envio': direccion_completa,
             'estado': 'pendiente',
+            'total': total,  # Total con descuentos y envío
             'costo_envio': costo_envio,
             'codigo_postal': shipping_data.get('codigo_postal', ''),
             'zona_envio': shipping_data.get('zona_envio', ''),
