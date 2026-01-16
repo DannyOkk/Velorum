@@ -165,8 +165,9 @@ class OrderSerializer(serializers.ModelSerializer):
         for detalle_data in detalles_data:
             watch_id = detalle_data.get('watch_id')
             cantidad = detalle_data.get('cantidad', 1)
+            precio_unitario = detalle_data.get('precio_unitario')  # Precio con descuento del frontend
             
-            print(f"🔍 Buscando producto ID: {watch_id}, cantidad: {cantidad}")
+            print(f"🔍 Buscando producto ID: {watch_id}, cantidad: {cantidad}, precio_unitario: {precio_unitario}")
             
             # Buscar el producto
             try:
@@ -178,12 +179,21 @@ class OrderSerializer(serializers.ModelSerializer):
                 order.delete()
                 raise ValidationError(f'Producto con ID {watch_id} no encontrado')
             
+            # Usar precio del frontend si existe, sino precio del producto
+            from decimal import Decimal
+            if precio_unitario is not None:
+                subtotal = Decimal(str(precio_unitario)) * cantidad
+                print(f"💰 Usando precio ajustado del frontend: ${precio_unitario} x {cantidad} = ${subtotal}")
+            else:
+                subtotal = producto.precio * cantidad
+                print(f"💰 Usando precio original del producto: ${producto.precio} x {cantidad} = ${subtotal}")
+            
             # Crear el detalle
             detalle = OrderDetail.objects.create(
                 pedido=order,
                 producto=producto,
                 cantidad=cantidad,
-                subtotal=producto.precio * cantidad
+                subtotal=subtotal
             )
             print(f"✅ Detalle creado: {detalle.id}")
             
