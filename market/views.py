@@ -1123,7 +1123,7 @@ def create_mp_preference(request):
                 'watch_id': item.get('watch_id') or item.get('id_backend') or item.get('id'),
                 'cantidad': item.get('quantity', 1),
                 'precio_unitario': item.get('price', 0)
-            } for item in cart_items if (item.get('watch_id') or item.get('id_backend') or item.get('id'))]  # Filtrar items sin watch_id (ej: envío)
+            } for item in cart_items]
         }
         
         print("📋 Order data preparada:", order_data)
