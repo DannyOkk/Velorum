@@ -1105,6 +1105,12 @@ def create_mp_preference(request):
             direccion_completa += f", Depto {shipping_data['departamento']}"
         direccion_completa += f", {shipping_data.get('ciudad', '')}, {shipping_data.get('provincia', '')}"
         
+        # Filtrar items de productos (excluir envío que tiene watch_id=null)
+        product_items = [item for item in cart_items if item.get('watch_id') or item.get('id_backend') or item.get('id')]
+        
+        print(f"📦 Total de items en carrito: {len(cart_items)}")
+        print(f"📦 Items de productos (sin envío): {len(product_items)}")
+        
         # Crear orden con todos los datos de envío y pago
         order_data = {
             'usuario': request.user if request.user.is_authenticated else None,
@@ -1123,8 +1129,8 @@ def create_mp_preference(request):
             'detalles_input': [{
                 'watch_id': item.get('watch_id') or item.get('id_backend') or item.get('id'),
                 'cantidad': item.get('quantity', 1),
-                'precio_unitario': item.get('price', 0)
-            } for item in cart_items]
+                'precio_unitario': item.get('price', 0)  # ✅ Precio con descuento del frontend
+            } for item in product_items]  # ✅ Solo items de productos, sin envío
         }
         
         print("📋 Order data preparada:", order_data)
@@ -1151,8 +1157,8 @@ def create_mp_preference(request):
             except CodigoDescuento.DoesNotExist:
                 print(f"⚠️ Código {codigo_str} no encontrado")
         
-        # Preparar items para MP
-        mp_items = [{'name': item.get('name', 'Producto'), 'quantity': item.get('quantity', 1), 'price': item.get('price', 0)} for item in cart_items]
+        # Preparar items para MP - usar solo items de productos y agregar envío si corresponde
+        mp_items = [{'name': item.get('name', 'Producto'), 'quantity': item.get('quantity', 1), 'price': item.get('price', 0)} for item in product_items]
         if costo_envio > 0:
             mp_items.append({'name': 'Envío', 'quantity': 1, 'price': costo_envio})
         
