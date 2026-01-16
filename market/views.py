@@ -1122,6 +1122,7 @@ def create_mp_preference(request):
             'apellido_invitado': (customer_data.get('apellido') or (request.user.last_name if request.user.is_authenticated else '')).strip(),
             'telefono_invitado': (customer_data.get('telefono_contacto') or (getattr(request.user, 'phone', None) or getattr(request.user, 'telefono', '') if request.user.is_authenticated else '')).strip(),
             'dni_invitado': customer_data.get('dni', '').strip(),
+            'codigo_descuento_usado': request.data.get('codigo_descuento') or '',
             'detalles_input': [{
                 'watch_id': item.get('watch_id') or item.get('id_backend') or item.get('id'),
                 'cantidad': item.get('quantity', 1),

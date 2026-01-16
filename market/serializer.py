@@ -108,7 +108,8 @@ class OrderSerializer(serializers.ModelSerializer):
         model = Order
         fields = ['id', 'usuario', 'usuario_detalle', 'fecha', 'estado', 'total', 'detalles', 'detalles_input', 
                   'direccion_envio', 'costo_envio', 'codigo_postal', 'zona_envio', 'metodo_pago',
-                  'email_invitado', 'nombre_invitado', 'apellido_invitado', 'telefono_invitado', 'dni_invitado']
+                  'email_invitado', 'nombre_invitado', 'apellido_invitado', 'telefono_invitado', 'dni_invitado',
+                  'codigo_descuento_usado']
         read_only_fields = ['id', 'fecha']
         extra_kwargs = {
             'estado': {'default': 'pendiente', 'help_text': "Estado del pedido (default: pendiente)"}
