@@ -1086,8 +1086,6 @@ def create_mp_preference(request):
     POST /market/mp/create-preference/
     """
     try:
-        print("📦 Datos recibidos:", request.data)
-        
         customer_data = request.data.get('customer_data', {})
         shipping_data = request.data.get('shipping_data', {})
         cart_items = request.data.get('cart_items', [])
@@ -1108,9 +1106,6 @@ def create_mp_preference(request):
         # Filtrar items de productos (excluir envío que tiene watch_id=null)
         product_items = [item for item in cart_items if item.get('watch_id') or item.get('id_backend') or item.get('id')]
         
-        print(f"📦 Total de items en carrito: {len(cart_items)}")
-        print(f"📦 Items de productos (sin envío): {len(product_items)}")
-        
         # Crear orden con todos los datos de envío y pago
         order_data = {
             'usuario': request.user if request.user.is_authenticated else None,
@@ -1130,21 +1125,17 @@ def create_mp_preference(request):
             'detalles_input': [{
                 'watch_id': item.get('watch_id') or item.get('id_backend') or item.get('id'),
                 'cantidad': item.get('quantity', 1),
-                'precio_unitario': item.get('price', 0)  # ✅ Precio con descuento del frontend
-            } for item in product_items]  # ✅ Solo items de productos, sin envío
+                'precio_unitario': item.get('price', 0)
+            } for item in product_items]
         }
-        
-        print("📋 Order data preparada:", order_data)
         
         from .serializer import OrderSerializer
         serializer = OrderSerializer(data=order_data, context={'request': request})
         
         if not serializer.is_valid():
-            print(f"❌ Error de validación del serializer: {serializer.errors}")
             return Response({'success': False, 'error': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
         
         order = serializer.save()
-        print(f"✅ Orden creada: #{order.id}")
         
         # Registrar uso del código de descuento si existe
         codigo_str = request.data.get('codigo_descuento')
@@ -1154,9 +1145,8 @@ def create_mp_preference(request):
                 from decimal import Decimal
                 monto_desc = Decimal(str(request.data.get('descuento_monto', 0)))
                 codigo.registrar_uso(order, request.user if request.user.is_authenticated else None, monto_desc)
-                print(f"✅ Código {codigo_str} registrado: usos_actuales={codigo.usos_actuales}")
             except CodigoDescuento.DoesNotExist:
-                print(f"⚠️ Código {codigo_str} no encontrado")
+                pass
         
         # Preparar items para MP - usar solo items de productos y agregar envío si corresponde
         mp_items = [{'name': item.get('name', 'Producto'), 'quantity': item.get('quantity', 1), 'price': item.get('price', 0)} for item in product_items]
@@ -1187,9 +1177,6 @@ def create_mp_preference(request):
         }, status=status.HTTP_200_OK)
         
     except Exception as e:
-        print(f"❌ Error creando preferencia de MP: {str(e)}")
-        import traceback
-        traceback.print_exc()
         return Response({'success': False, 'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 

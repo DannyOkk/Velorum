@@ -75,24 +75,18 @@ def create_preference(order_data, request=None):
         "statement_descriptor": "VELORUM"
     }
     
-    print(f"📤 Preference data a enviar: {preference_data}")
-    
     # Crear preferencia
     preference_response = sdk.preference().create(preference_data)
-    
-    print(f"📨 Respuesta de MP: {preference_response}")
     
     # Verificar si hubo error
     if preference_response.get("status") != 201:
         error_msg = preference_response.get("response", {}).get("message", "Error desconocido de Mercado Pago")
-        print(f"❌ Error de MP: {error_msg}")
         raise Exception(f"Error de Mercado Pago: {error_msg}")
     
     preference = preference_response["response"]
     
     # Verificar que tengamos los datos necesarios
     if "id" not in preference or "init_point" not in preference:
-        print(f"❌ Respuesta de MP incompleta: {preference}")
         raise Exception("Mercado Pago no devolvió preference_id o init_point. Verificá tus credenciales.")
     
     return {

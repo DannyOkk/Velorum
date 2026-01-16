@@ -154,28 +154,19 @@ class OrderSerializer(serializers.ModelSerializer):
         # Extraer detalles_input antes de crear la orden
         detalles_data = validated_data.pop('detalles_input', [])
         
-        print(f"📦 Creando orden con validated_data: {validated_data}")
-        print(f"📦 Detalles a crear: {detalles_data}")
-        
         # Crear la orden
         order = Order.objects.create(**validated_data)
-        print(f"✅ Orden creada: #{order.id}")
         
         # Crear los detalles si existen
         for detalle_data in detalles_data:
             watch_id = detalle_data.get('watch_id')
             cantidad = detalle_data.get('cantidad', 1)
-            precio_unitario = detalle_data.get('precio_unitario')  # Precio con descuento del frontend
-            
-            print(f"🔍 Buscando producto ID: {watch_id}, cantidad: {cantidad}, precio_unitario: {precio_unitario}")
+            precio_unitario = detalle_data.get('precio_unitario')
             
             # Buscar el producto
             try:
                 producto = Product.objects.get(id=watch_id)
-                print(f"✅ Producto encontrado: {producto.nombre}")
             except Product.DoesNotExist:
-                # Si el producto no existe, eliminar la orden y lanzar error
-                print(f"❌ Producto con ID {watch_id} no encontrado")
                 order.delete()
                 raise ValidationError(f'Producto con ID {watch_id} no encontrado')
             
@@ -183,10 +174,8 @@ class OrderSerializer(serializers.ModelSerializer):
             from decimal import Decimal
             if precio_unitario is not None:
                 subtotal = Decimal(str(precio_unitario)) * cantidad
-                print(f"💰 Usando precio ajustado del frontend: ${precio_unitario} x {cantidad} = ${subtotal}")
             else:
                 subtotal = producto.precio * cantidad
-                print(f"💰 Usando precio original del producto: ${producto.precio} x {cantidad} = ${subtotal}")
             
             # Crear el detalle
             detalle = OrderDetail.objects.create(
@@ -195,17 +184,10 @@ class OrderSerializer(serializers.ModelSerializer):
                 cantidad=cantidad,
                 subtotal=subtotal
             )
-            print(f"✅ Detalle creado: {detalle.id}")
             
             # Actualizar stock vendido
             producto.stock_vendido += cantidad
             producto.save()
-            print(f"📊 Stock vendido actualizado: {producto.stock_vendido}")
-        
-        # NO recalcular total — ya viene correcto del frontend con descuentos aplicados
-        # order.total_update()  # Comentado: el total ya incluye descuentos y envío
-        print(f"💰 Total de la orden (del frontend): {order.total}")
-        print(f"💰 Costo de envío: {order.costo_envio}")
         
         return order
 
