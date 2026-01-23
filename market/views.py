@@ -81,15 +81,25 @@ class ProductViewSet(viewsets.ModelViewSet):
         if q:
             queryset = queryset.filter(nombre__icontains=q)
 
-        # Filtro por grupo -> categorías reales (1,2,3)
-        categoria = (params.get("categoria") or "todos").strip().lower()
-        if categoria == "relojes":
+        # Filtro por categoría o marca
+        categoria = (params.get("categoria") or "todos").strip().upper()
+        
+        # Marcas principales
+        marcas = ['ROLEX', 'CASIO', 'G-SHOCK', 'PATEK PHILIPPE', 'RICHARD MILLE', 
+                  'HUBLOT', 'TAG HEUER', 'AUDEMARS PIGUET', 'TOMI', 'BINBOND', 'CHENXI']
+        
+        if categoria == "TODOS":
+            # No filtra, muestra todo
+            pass
+        elif categoria == "RELOJES":
             queryset = queryset.filter(categoria_id=1)
-        elif categoria == "premium":
+        elif categoria == "PREMIUM":
             queryset = queryset.filter(categoria_id=2)
-        elif categoria == "smartwatch":
+        elif categoria == "SMARTWATCH":
             queryset = queryset.filter(categoria_id=3)
-        # "todos": no filtra
+        elif categoria in marcas:
+            # Filtrar por marca (busca en el nombre del producto)
+            queryset = queryset.filter(nombre__icontains=categoria)
 
         # Rango de precios
         precio_min = params.get("precio_min")
