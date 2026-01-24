@@ -68,13 +68,6 @@ class Product(models.Model):
         if self.imagenes and len(self.imagenes) > 0:
             return self.imagenes[0]
         return None
-    
-    @property
-    def precio_final(self):
-        """Precio que ve el cliente (considera ofertas)"""
-        if self.en_oferta and self.precio_oferta_proveedor:
-            return self.precio_oferta_proveedor * 2  # Markup del 100%
-        return self.precio
 
     def save(self, *args, **kwargs):
         # Auto-generar slug si no existe

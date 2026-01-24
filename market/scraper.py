@@ -205,7 +205,11 @@ def process_product_data(producto_json, categoria, subcategorias_map=None):
         external_url = f"{CATEGORIAS_CONFIG[categoria.nombre.lower()]['url']}/{p_link}" if p_link else None
         
         # Calcular precio (markup del 125%)
-        precio_calculado = float(precio_proveedor) * 2.25
+        precio_calculado = 0
+        if en_oferta and precio_oferta_proveedor:
+            precio_calculado = float(precio_oferta_proveedor) * 2.20
+        else:
+            precio_calculado = float(precio_proveedor) * 2.20
         
         # Verificar si el producto ya existe
         try:
