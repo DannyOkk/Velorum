@@ -11,6 +11,7 @@ from django.core.cache import cache
 from django.utils import timezone
 from .telegram import send_order_paid_notification
 from django.db.models import F, Q
+from decimal import Decimal
 
 # Create your views here.
 
@@ -59,6 +60,16 @@ class ProductViewSet(viewsets.ModelViewSet):
     serializer_class = ProductSerializer
     permission_classes = [ProductPermission]
     parser_classes = [JSONParser, MultiPartParser, FormParser]
+    
+    # Configurar paginación específica para este ViewSet
+    from rest_framework.pagination import PageNumberPagination
+    
+    class ProductPagination(PageNumberPagination):
+        page_size = 12
+        page_size_query_param = 'page_size'
+        max_page_size = 10000
+    
+    pagination_class = ProductPagination
     
     def get_queryset(self):
         queryset = Product.objects.all()
@@ -195,14 +206,19 @@ class ProductViewSet(viewsets.ModelViewSet):
     
     @action(detail=False, methods=['post'], permission_classes=[IsAdminOrOperator])
     def reset_all_prices(self, request):
-        """Resetea todos los precios de productos a precio_proveedor * 2"""
+        """Resetea todos los precios de productos a precio_proveedor * 2.20 (o precio_oferta si aplica)"""
         try:
             productos = Product.objects.all()
             actualizados = 0
             
             for producto in productos:
                 if producto.precio_proveedor:
-                    nuevo_precio = producto.precio_proveedor * 2
+                    # Si está en oferta y tiene precio de oferta, usarlo
+                    if producto.en_oferta and producto.precio_oferta_proveedor:
+                        nuevo_precio = producto.precio_oferta_proveedor * Decimal('2.20')
+                    else:
+                        nuevo_precio = producto.precio_proveedor * Decimal('2.20')
+                    
                     producto.precio = nuevo_precio
                     producto.precio_manual = False
                     producto.save()
@@ -221,7 +237,7 @@ class ProductViewSet(viewsets.ModelViewSet):
     
     @action(detail=True, methods=['post'], permission_classes=[IsAdminOrOperator])
     def reset_price(self, request, pk=None):
-        """Resetea el precio de un producto específico a precio_proveedor * 2"""
+        """Resetea el precio de un producto específico a precio_proveedor * 2.20 (o precio_oferta si aplica)"""
         try:
             producto = self.get_object()
             
@@ -230,7 +246,14 @@ class ProductViewSet(viewsets.ModelViewSet):
                     'error': 'Este producto no tiene precio de proveedor definido'
                 }, status=status.HTTP_400_BAD_REQUEST)
             
-            nuevo_precio = producto.precio_proveedor * 2
+            # Si está en oferta y tiene precio de oferta, usarlo
+            if producto.en_oferta and producto.precio_oferta_proveedor:
+                nuevo_precio = producto.precio_oferta_proveedor * Decimal('2.20')
+                precio_base = float(producto.precio_oferta_proveedor)
+            else:
+                nuevo_precio = producto.precio_proveedor * Decimal('2.20')
+                precio_base = float(producto.precio_proveedor)
+            
             producto.precio = nuevo_precio
             producto.precio_manual = False
             producto.save()
@@ -238,7 +261,7 @@ class ProductViewSet(viewsets.ModelViewSet):
             return Response({
                 'mensaje': 'Precio reseteado exitosamente',
                 'producto_id': producto.id,
-                'precio_proveedor': float(producto.precio_proveedor),
+                'precio_proveedor': precio_base,
                 'precio_nuevo': float(nuevo_precio)
             }, status=status.HTTP_200_OK)
             
